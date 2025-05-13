@@ -1,4 +1,7 @@
+import copy
+
 import networkx as nx
+from networkx.classes import neighbors
 
 from database.DAO import DAO
 
@@ -8,6 +11,8 @@ class Model:
         self._graph = nx.Graph()
         self._nodes = DAO.getAllNodes()
         self._idMap = {}
+        self._bestPath = []
+        self._bestCost = 0
         for node in self._nodes:
             self._idMap[node.object_id] = node
 
@@ -84,3 +89,52 @@ class Model:
 
     def getObjectFromId(self, idInput):
         return self._idMap[idInput]
+
+
+    def getOptimalPath(self, source, lun):
+        self._bestPath = []
+        self._bestCost = 0
+        # ri-inizializzo tutto
+
+        parziale = [source]  # inizializzo la sol parziale con source perché sicuramente ci deve essere
+        for n in nx.neighbors(self._graph, source):
+            if parziale[-1].classification == n.classification:
+                parziale.append(n)
+                self._ricorsione(parziale, lun)
+                parziale.pop()
+
+
+        return self._bestPath, self._bestCost
+
+    def _ricorsione(self, parziale, lun):
+        # controllo se parziale è una soluzione
+        if len(parziale) == lun:  # parziale ha la lunghezza desiderata
+        # verifico se è una soluzione migliore e in ogni caso esco
+            if self.costo(parziale) > self._bestCost:
+                self._bestCost = self.costo(parziale)
+                self._bestPath = copy.deepcopy(parziale)
+
+            return
+        # se arrivo qui parziale può ancora ammettere altri nodi
+        for n in self._graph.neighbors(parziale[-1]):
+            if parziale[-1].classification == n.classification:
+                parziale.append(n)
+                self._ricorsione(parziale, lun)
+                parziale.pop()
+
+
+
+    def costo(self, listObject):
+        # deve sommare gli archi della lista
+        totCosto = 0
+        for i in range(0, len(listObject)-1):   # -1 perché devo cercare gli archi
+            totCosto += self._graph[listObject[i]][listObject[i+1]]["weight"]
+        return totCosto
+
+
+
+
+
+
+
+
